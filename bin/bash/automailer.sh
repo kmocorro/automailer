@@ -8,7 +8,7 @@
 
 # varbs
 PATH=$PATH:/c/xampp/mysql/bin
-APIRES=$(wget --server-response http://10.3.95.227:9000/uploada -O /c/sandbox/nodejs-automailer/public/reslog.txt 2>&1 | grep -c 'HTTP/1.1 200 OK')
+APIRES=$(wget --server-response http://10.3.95.227:9000/upload -O /c/sandbox/nodejs-automailer/public/reslog.txt 2>&1 | grep -c 'HTTP/1.1 200 OK')
 HOST="localhost"
 USER="root"
 PASS="2qhls34r"
@@ -20,10 +20,11 @@ echo "Checking web service response..."
 if [ $APIRES != 1 ]; 
     then
         echo "Cannot access API"
-        curl -d "gg=Hey" http://localhost:8000/gg
+        curl -d "gg=Hey" http://localhost:8000/404
         sleep 11
     else
         echo "Server is active"
+        curl -d "user=hehe" http://localhost:8000/202
         sleep 11
 fi
 

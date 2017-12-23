@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Uploader</title>
+<link rel="stylesheet" type="text/css" href="./style/style.css">
+<link rel="stylesheet" type="text/css" href="./style/font-awesome.css">
+<link rel="stylesheet" type="text/css" href="./style/bootstrap-datetimepicker.css">
+<link rel="stylesheet" type="text/css" href="./src/bootstrap/css/bootstrap.min.css">
+<script type="text/javascript" src="./src/popper/popper.min.js"></script>
+<script type="text/javascript" src="./src/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="./src/bootstrap/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="./js/validation.min.js"></script>
+<script type="text/javascript" src="./js/verifyUpload.js"></script>
+<script type="text/javascript" src="./js/moment.js"></script>
+<script type="text/javascript" src="./js/bootstrap-datetimepicker.js"></script>
+
+</head>
+<body>
+    <div class = "container">
+        <div class="wrapper">
+            <form action="" method="post" id="upload_form" name="upload_form" class="form-upload">
+                <h3>Fill up the CofA form</h3>
+                
+                <hr class="colorgraph"><br>
+                <div class="header_div" style="padding-bottom:20px;">
+                    <div class="order_no_div" style="padding-bottom:15px;">
+                        <input type="text" onkeypress='return event.charCode >= 48 && event.charCode <= 57' class="form-control" id="order_no" name="order_no" placeholder="Invoice number"/>
+                    </div>
+                    <div class='input-group date' name='datetimepicker1' id='datetimepicker1' style="padding-bottom:15px;">
+                        <input type='text' class="form-control" id="delivery_date" name="delivery_date" placeholder="Delivery date"/>
+                        <span class="input-group-addon">
+                            <span class="glyphicon glyphicon-calendar"></span>
+                        </span>
+                        <script type="text/javascript">
+                            $(function () {
+                                $('#datetimepicker1').datetimepicker();
+                            });
+                        </script>
+                    </div>
+                    <div class="supplier_id" class="supplier_id" id="supplier_id" name="supplier_id" style="padding-bottom:1px;">
+                        <!--use ejs here from supplier list table for select input-->
+                        <select class="form-control" id="supplier_id" name="supplier_id">
+                            <!--ejs loop here-->
+                            <option selected="true" disabled="disabled" >Select supplier name</option>
+                            
+                                <option value="1001">
+                                    TZS
+                                </option>
+                            
+
+                        </select>
+                    </div>
+                </div>
+                
+                <hr>
+
+                <div class="ask_div" style="padding-bottom:10px;">
+                    <h4>Upload CofA file here:</h4>
+                </div>
+                <div id="error">
+                    <!-- error / success will be shown here -->
+                </div>
+                <div class="xlf_div" style="padding-bottom: 10px;">
+                    <input type="file" name="xlfile" id="xlf"/>
+                </div>
+                <hr>
+                
+                <div class="submit_div" style="padding-bottom: 20px;">
+                    <button id="btn-upload" class="btn btn-lg btn-primary btn-block" name="Submit" type="Submit" value="Upload" disabled>Upload</button>
+                </div>
+            </form> 
+        </div>
+    </div>
+
+</body>
+<script type="text/javascript" src="./js/shim.min.js"></script>
+<script type="text/javascript" src="./js/xlsx.full.min.js"></script>
+<script>
+    var X = XLSX;
+    var XW = {
+	/* worker message */
+	msg: 'xlsx',
+	/* worker scripts */
+	worker: './js/xlsxworker.js'
+    };
+    var global_wb;
+    var outputJSON;
+    
+    var process_wb = (function() {
+	var OUT = document.getElementById('out');
+    var HTMLOUT = document.getElementById('htmlout');
+    
+        var to_json = function to_json(workbook) {
+            var result = {};
+            //var result = [];
+            workbook.SheetNames.forEach(function(sheetName) {
+                var roa = X.utils.sheet_to_json(workbook.Sheets[sheetName], {header:1});
+                if(roa.length) result[sheetName] = roa;
+            });
+            //return JSON.stringify(result, 2, 2);
+            return result;
+        };
+    
+        return function process_wb(wb) {
+            global_wb = wb;
+            outputJSON = "";
+            switch(get_format()) {
+              /*  case "form": output = to_fmla(wb); break;
+                case "html": output = to_html(wb); break;
+                case "json": output = to_json(wb); break; */
+                default: outputJSON = to_json(wb);
+            }
+            console.log(outputJSON);
+            
+            
+            //if(OUT.innerText === undefined) OUT.textContent = output;
+            //else OUT.innerText = output;
+            //if(typeof console !== 'undefined') console.log("output", new Date());
+        };
+    })();
+
+	var get_format = (function() {
+        //var radios = document.getElementsByName( "format" );
+        var radios = "JSON";
+		return function() {
+			for(var i = 0; i < radios.length; ++i) if(radios[i].checked || radios.length === 1) return radios[i].value;
+		};
+    })();
+    
+    var do_file = (function() {
+        var rABS = typeof FileReader !== "undefined" && (FileReader.prototype||{}).readAsBinaryString;
+        var domrabs = document.getElementsByName("userabs")[0];
+    //    if(!rABS) domrabs.disabled = !(domrabs.checked = false);
+
+        var use_worker = typeof Worker !== 'undefined';
+        var domwork = document.getElementsByName("useworker")[0];
+    //    if(!use_worker) domwork.disabled = !(domwork.checked = false);
+
+        var xw = function xw(data, cb) {
+            var worker = new Worker(XW.worker);
+            worker.onmessage = function(e) {
+                switch(e.data.t) {
+                    case 'ready': break;
+                    case 'e': console.error(e.data.d); break;
+                    case XW.msg: cb(JSON.parse(e.data.d)); break;
+                }
+            };
+            worker.postMessage({d:data,b:rABS?'binary':'array'});
+        };
+
+        return function do_file(files) {
+            //rABS = domrabs.checked;
+            //use_worker = domwork.checked;
+            var f = files[0];
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                if(typeof console !== 'undefined'); //console.log("onload", new Date(), rABS, use_worker)
+                var data = e.target.result;
+                if(!rABS) data = new Uint8Array(data);
+                if(use_worker) xw(data, process_wb);
+                else process_wb(X.read(data, {type: rABS ? 'binary' : 'array'}));
+            };
+            if(rABS) reader.readAsBinaryString(f);
+            else reader.readAsArrayBuffer(f);
+        };
+    })();
+
+    (function(){
+        var xlf = document.getElementById('xlf');
+        if(!xlf.addEventListener) return;
+
+        function handleFile(e) {
+            do_file(e.target.files);
+        }
+        xlf.addEventListener('change', handleFile, false);
+    })();
+</script>
+<script>
+
+</script>
+</html>
