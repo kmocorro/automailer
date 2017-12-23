@@ -8,24 +8,22 @@ let nodemailer = require('nodemailer');
 
 module.exports = function(app){
 
-    //  parse json with limit
-    app.use(bodyParser.json({limit: '50mb'}));
-    //  handle url request
-    app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
+    app.use(bodyParser.json({limit: '50mb'}));  //  parse json with limit
+    app.use(bodyParser.urlencoded({limit: '50mb', extended: true})); //  handle url request
+
+    app.get('/', function(req, res){
+        res.render('index');
+    });
 
     app.post('/404', function(req, res){    // link 404
-        //  change this later
-        let post_gg = req.body;
-        console.log(post_gg.gg);
-
+        let post_gg = req.body; //  change this later
+        //console.log(post_gg.gg);
         if(!post_gg.gg){
-
             console.log('Someone is trying to access the link via post');
             res.send(' Hey, you dont do that to me :) ');
-
         } else {
-            //  authenticate the mailer
-            function authMailer404(){
+            
+            function authMailer404(){ //  authenticate the mailer
                 return new Promise(function(resolve, reject){
                     // use property poolCloud
                     mysqlCloud.poolCloud.getConnection(function(err, connection){
@@ -48,17 +46,17 @@ module.exports = function(app){
                                     });
                                 }
                             resolve(mailer_transporter_obj);
+                            console.log('Authenticated mail');
                         });
                         connection.release();
                     });
                 });
             }
-            //  admin credentials
-            function adminMail(){
+            
+            function adminMail(){ //  admin credentials
                 return new Promise(function(resolve, reject){
                     mysqlCloud.poolCloud.getConnection(function(err, connection){
-                        //  query admin
-                        connection.query({
+                        connection.query({ //  query admin
                             sql: 'SELECT * FROM tbl_mail_recipients WHERE isAdmin = 1' // admin only
                         },  function(err, results, fields){
                             let mail_admin = [];
@@ -71,15 +69,17 @@ module.exports = function(app){
                                     });
                                 }
                             resolve(mail_admin);
+                            console.log('Authenticated admin');
                         });
                         connection.release();
                     });
                 });
             }
-            //  promise invoker 
-            authMailer404().then(function(mailer_transporter_obj){
+            
+            authMailer404().then(function(mailer_transporter_obj){ //  promise invoker 
                 return adminMail().then(function(mail_admin){
                     //  mailer
+                    console.log('Sending 404 error to admin...');
                     nodemailer.createTestAccount((err, account) => {
                         //  reusable transporter obj using SMTP
                         let transporter = nodemailer.createTransport({
@@ -94,22 +94,22 @@ module.exports = function(app){
                                 ciphers: mailer_transporter_obj[0].cipher
                             }
                         });
-
                         //  setup mail
                         let mailOptions = {
                             from: '"Auto Mailer" <' + mailer_transporter_obj[0].user + '>', 
                             to: mail_admin[0].to_mail,
                             subject: 'AM Server is OFFLINE.',
-                            text: 'Please check our server: http://10.3.95.227:8000/mailer',
+                            text: 'Please read the subject ↑',
                         };
 
                         //  send mail
                         transporter.sendMail(mailOptions, (error, info) => {
                             if (error) {
+                                res.send(error);
                                 return console.log(error);
                             }
-                            console.log('Message sent!');
-                            res.send('DONE!');
+                            console.log('404 error has been sent');
+                            res.send('404 error has been sent');
                         });
                     });
                 });
@@ -120,10 +120,9 @@ module.exports = function(app){
     app.post('/202', function(req, res){    //  HTTP OK
         //  auth credentials from post
         let post_auth = req.body;
-        console.log(post_auth.user + ' | ' + post_auth.pass);
+        //console.log(post_auth.user + ' | ' + post_auth.pass);
 
-        //  function query auth
-        function queryAuth(){
+        function queryAuth(){ //  function query auth
             return new Promise(function(resolve, reject){
                 mysqlCloud.poolCloud.getConnection(function(err, connection){
                     connection.query({
@@ -138,6 +137,8 @@ module.exports = function(app){
                                     db: results[0].db,
                                     hasAuth:    results[0].hasAuth
                                 });
+                            } else {
+                                reject('Check tbl_admin_auth from mysqlCloud');
                             }
                         resolve(queryAuth_obj);
                     });
@@ -146,13 +147,11 @@ module.exports = function(app){
             });
         }
 
-        queryAuth().then(function(queryAuth_obj){
-            if(typeof post_auth.user == 'undefined' || post_auth.user == null || post_auth.length < 0 || post_auth.user !== queryAuth_obj[0].user || typeof post_auth.pass == 'undefined' || post_auth.pass == null || post_auth.pass !== queryAuth_obj[0].pass ){
-                console.log('Unauthorized access | ' + req.ip + ' | ' + moment(new Date()).format()); // remove this in prod
+        queryAuth().then(function(queryAuth_obj){   // invokeroo
+            if(typeof post_auth.user == 'undefined' || post_auth.user == null || post_auth.length < 0 || post_auth.user !== queryAuth_obj[0].user || typeof post_auth.pass == 'undefined' || post_auth.pass == null || post_auth.pass !== queryAuth_obj[0].pass ){  //  user & pass from posted value to mysqlcloud not equal
                 
-                function unauthorized202(){
+                function unauthorized202(){ //  unauthorized IP will be stored to db *ehehehhe*..
                     return new Promise(function(resolve, reject){
-                        //  unauthorized IP will be stored to db *ehehehhe*..
                         mysqlCloud.poolCloud.getConnection(function(err, connection){
                             connection.query({
                                 sql: 'INSERT INTO tbl_ip SET request_ip=?, access_url=?, access_date=?, access_status=? ',
@@ -160,23 +159,21 @@ module.exports = function(app){
                             },  function(err, results, fields){
                                 let unauthorized_ip = req.ip;
                                 resolve(unauthorized_ip);
-                                console.log('Denied');
+                                console.log('Unauthorized access | ' + req.ip + ' | ' + moment(new Date()).format('llll'));
                             });
                             connection.release();
                         });
                     });
                 }
     
-                unauthorized202().then(function(unauthorized_ip){
+                unauthorized202().then(function(unauthorized_ip){   // invoket
                     res.send(' Unauthorized access by ' + unauthorized_ip); 
                 });
     
-            } else if(post_auth.user === queryAuth_obj[0].user && post_auth.pass === queryAuth_obj[0].pass) {
-                console.log('Access Granted | ' + req.ip + ' | ' + moment(new Date()).format()); // remove this in prod
+            } else if(post_auth.user === queryAuth_obj[0].user && post_auth.pass === queryAuth_obj[0].pass) {   // same user & pass
     
-                function authorized202(){
+                function authorized202(){  // authorized IP will be stored too :P
                     return new Promise(function(resolve, reject){
-                        // authorized IP will be stored :P
                         mysqlCloud.poolCloud.getConnection(function(err, connection){
                             connection.query({
                                 sql: 'INSERT INTO tbl_ip SET request_ip=?, access_url=?, access_date=?, access_status=?',
@@ -184,26 +181,22 @@ module.exports = function(app){
                             },  function(err, results, fields){
                                 let authorized_ip = req.ip;
                                 resolve(authorized_ip);
-                                console.log('Granted');
+                                console.log('Access Granted | ' + req.ip + ' | ' + moment(new Date()).format('llll'));
                             });
                             connection.release();
                         });
                     });
                 }
     
-                //  authenticate the mailer
-                function authMailer202(){
-                    return new Promise(function(resolve, reject){
-                        // use property poolCloud
-                        mysqlCloud.poolCloud.getConnection(function(err, connection){
-                            //  query auth
+                function authMailer202(){   //  authenticate the mailer
+                    return new Promise(function(resolve, reject){ // use property poolCloud
+                        mysqlCloud.poolCloud.getConnection(function(err, connection){ //  query auth
                             connection.query({
                                 sql: 'SELECT * FROM tbl_auth_mail '
                             },  function(err, results, fields){
                                 let mailer_transporter_obj =[];
                                     if(results[0].hasAuth !== 1){
-                                        // not authorized
-                                        res.send(results[0].user + ' is not authorized');
+                                        res.send(results[0].user + ' is not authorized'); // not authorized
                                     } else {
                                         // authorized from db
                                         mailer_transporter_obj.push({
@@ -215,7 +208,6 @@ module.exports = function(app){
                                         });
                                     }
                                 resolve(mailer_transporter_obj);
-                                
                                 console.log('Authenticated mail');
                             });
                             connection.release();
@@ -244,8 +236,7 @@ module.exports = function(app){
                     });
                 }
     
-                //  3 previous shift WIP summary 
-                function wipReport(){
+                function wipReport(){ //  3 previous shift WIP summary 
                     return new Promise(function(resolve, reject){
                         mysqlMES.poolMES.getConnection(function(err, connection){   // using MES credentials
                             connection.query({
@@ -258,8 +249,7 @@ module.exports = function(app){
                     });
                 }
     
-                //  3 previous shift OUTS summary
-                function outsReport(){
+                function outsReport(){  //  3 previous shift OUTS summary
                     return new Promise(function(resolve, reject){
                         mysqlMES.poolMES.getConnection(function(err, connection){   
                             connection.query({
@@ -272,7 +262,7 @@ module.exports = function(app){
                     });
                 }
     
-                authorized202().then(function(authorized_ip){
+                authorized202().then(function(authorized_ip){ // invoker for all the objects :)
                     return authMailer202().then(function(mailer_transporter_obj){
                         return recipientMail().then(function(recipients_arr){
                             //  mailer
@@ -309,7 +299,7 @@ module.exports = function(app){
                                         return console.log(error);
                                     }
                                     console.log('Message sent!');
-                                    res.send('Request by: ' + authorized_ip + ' report sent successfully');
+                                    res.send('Requested by: ' + authorized_ip + ' Report sent successfully!');
                                 });
                             });
                         });
@@ -317,7 +307,5 @@ module.exports = function(app){
                 });
             }
         });
-        
     });
-
 } 

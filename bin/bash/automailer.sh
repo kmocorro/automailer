@@ -8,7 +8,8 @@
 
 # varbs
 PATH=$PATH:/c/xampp/mysql/bin
-APIRES=$(wget --server-response http://10.3.95.227:9000/upload -O /c/sandbox/nodejs-automailer/public/reslog.txt 2>&1 | grep -c 'HTTP/1.1 200 OK')
+#checkFile= ../tmp/automailer.txt
+APIRES=$(wget --server-response http://localhost:8000/ -O /c/sandbox/nodejs-automailer/public/reslog.txt 2>&1 | grep -c 'HTTP/1.1 200 OK') #check if my server is online
 HOST="localhost"
 USER="root"
 PASS="2qhls34r"
@@ -18,16 +19,24 @@ POSTP=$(mysql -h$HOST -u $USER -p$PASS $DB -s<<<"SELECT pass FROM tbl_cloud_deta
 
 echo "Checking web service response..."
 
-# check
-if [ $APIRES != 1 ]; # not equal to 202
-    then
+if [ -e "../tmp/automailer.txt" ]; then
+    echo "automailer is already running"
+    sleep 5
+else
+    touch ../tmp/automailer.txt
+
+    if [ $APIRES != 1 ]; then
         echo "Cannot access API"
-        curl -d "gg=Error404" http://localhost:8000/404
-        sleep 11
+        curl -d "gg=Error404" http://localhost:8000/404    
+        sleep 300
+        rm ../tmp/automailer.txt
+        sh ./automailer.sh
     else
         echo "Server is active"
         curl -d "user=$POSTU&pass=$POSTP" http://localhost:8000/202
         sleep 11
-fi
+        rm ../tmp/automailer.txt
+        # wait for next trigger 6:30 / 18:30
+    fi
 
-echo "Done!"
+fi
