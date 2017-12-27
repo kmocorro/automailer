@@ -12,15 +12,15 @@ module.exports = function(app){
     app.use(bodyParser.urlencoded({limit: '50mb', extended: true})); //  handle url request
 
     app.get('/', function(req, res){
-        res.render('index');
+        res.render('index', {ip: req.ip});
     });
 
     app.post('/404', function(req, res){    // link 404
         let post_gg = req.body; //  change this later
         //console.log(post_gg.gg);
         if(!post_gg.gg){
-            console.log('Someone is trying to access the link via post');
-            res.send(' Hey, you dont do that to me :) ');
+            console.log('Someone is trying to access the link via post IP: ' + req.ip + ' as of ' + moment(new Date()).format('llll'));
+            res.send(' Hey, ' + req.ip + ' you dont do that to me. Dont worry, I will get back to you. :) ');
         } else {
             
             function authMailer404(){ //  authenticate the mailer
@@ -98,8 +98,8 @@ module.exports = function(app){
                         let mailOptions = {
                             from: '"Auto Mailer" <' + mailer_transporter_obj[0].user + '>', 
                             to: mail_admin[0].to_mail,
-                            subject: 'AM Server is OFFLINE.',
-                            text: 'Please read the subject ↑',
+                            subject: 'AM Error 404 | Index has been changed!',
+                            text: 'Check automailer.sh if the link was not http://localhost:8000/',
                         };
 
                         //  send mail
