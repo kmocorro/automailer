@@ -18,7 +18,7 @@ POSTP=$(mysql -h$HOST -u $USER -p$PASS $DB -s<<<"SELECT pass FROM tbl_cloud_deta
 
 conRefused(){ # is connection refused? || is nodejs server down?
                         
-    echo "Connection refused means Server is down..."
+    echo "Connection refused means server is down..."
     rm ../tmp/automailer.txt
 
     start ../reviver/noderev.sh
