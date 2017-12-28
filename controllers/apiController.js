@@ -1,7 +1,7 @@
 let bodyParser = require('body-parser');
-let mysqlLocal = require('../dbconfig/configLocal').poolLocal;  //  local db
+let mysqlLocal = require('../dbconfig/configLocal');  //  local db
 let mysqlCloud = require('../dbconfig/configCloud');  //  cloud db
-let mysqlMES = require('../dbconfig/configMES').poolMES;    //  mes data
+let mysqlMES = require('../dbconfig/configMES');    //  mes data
 let Promise = require('bluebird');
 let moment = require('moment');
 let nodemailer = require('nodemailer');
@@ -249,19 +249,246 @@ module.exports = function(app){
                     });
                 }
     
-                function outsReport(){  //  3 previous shift OUTS summary
+                function outsReport(){  // AM extractor// 3 previous shift OUTS summary
                     return new Promise(function(resolve, reject){
                         mysqlMES.poolMES.getConnection(function(err, connection){   
                             connection.query({
-                                sql: '',
+                                sql: 'SELECT A.process_id, A.first_d, B.second_d, C.third_d FROM (SELECT process_id, SUM(out_qty) AS first_d FROM MES_OUT_DETAILS A	WHERE date_time >= CONCAT(DATE_ADD(CURDATE(), INTERVAL -1 DAY)," 18:30:00") AND date_time <= CONCAT(DATE_ADD(CURDATE(), INTERVAL 0 DAY)," 06:29:59")  GROUP BY process_id) A JOIN(SELECT process_id, SUM(out_qty) AS second_d FROM MES_OUT_DETAILS A WHERE date_time >= CONCAT(DATE_ADD(CURDATE(), INTERVAL -1 DAY)," 06:30:00") AND date_time <= CONCAT(DATE_ADD(CURDATE(), INTERVAL -1 DAY)," 18:29:59") GROUP BY process_id) B ON A.process_id = B.process_id JOIN(SELECT process_id, SUM(out_qty) AS third_d FROM MES_OUT_DETAILS A WHERE date_time >= CONCAT(DATE_ADD(CURDATE(), INTERVAL -2 DAY)," 18:30:00") AND date_time <= CONCAT(DATE_ADD(CURDATE(), INTERVAL -1 DAY)," 06:29:59") GROUP BY process_id)  C ON A.process_id = C.process_id '
                             },  function(err, results, fields){
-    
+                                    let outsReports_obj = [];
+                                        for(let i=0;i<results.length;i++){
+                                            outsReports_obj.push({
+                                                process_id: results[i].process_id,
+                                                first_d: results[i].first_d,
+                                                second_d: results[i].second_d,
+                                                third_d: results[i].third_d
+                                            });
+                                        }
+                                    resolve(outsReports_obj);
                             });
                             connection.release();
                         });
                     });
                 }
-    
+
+                outsReport().then(function(outsReports_obj){
+                    // clean obj for AM Extract only
+                    let outsReports_obj_cleaned = [];
+                    let DATEgo = moment(new Date()).subtract(1, 'days');
+                    let first_d = moment(DATEgo).format('YYYY-MMM-D, [PM]');
+                    let second_d = moment(DATEgo).format('YYYY-MMM-D, [AM]');
+
+                    let DATEgogo = moment(new Date()).subtract(2, 'days');
+                    let third_d = moment(DATEgogo).format('YYYY-MMM-D, [PM]');
+
+                        for(let i=0;i<outsReports_obj.length;i++){ // cleaning objects
+                            if(outsReports_obj[i].process_id == 'DAMAGE'){
+                                outsReports_obj_cleaned.push({ 
+                                    DAMAGE: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'POLY'){
+                                outsReports_obj_cleaned.push({ 
+                                    POLY: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'BSGDEP'){
+                                outsReports_obj_cleaned.push({ 
+                                    BSGDEP: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'NTM'){
+                                outsReports_obj_cleaned.push({ 
+                                    NTM: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'NOXE'){
+                                outsReports_obj_cleaned.push({ 
+                                    NOXE: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'NDEP'){
+                                outsReports_obj_cleaned.push({ 
+                                    NDEP: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'PTM'){
+                                outsReports_obj_cleaned.push({ 
+                                    PTM: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'TOXE'){
+                                outsReports_obj_cleaned.push({ 
+                                    TOXE: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'CLEANTEX'){
+                                outsReports_obj_cleaned.push({ 
+                                    CLEANTEX: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'PDRIVE'){
+                                outsReports_obj_cleaned.push({ 
+                                    PDRIVE: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'ARC_BARC'){
+                                outsReports_obj_cleaned.push({ 
+                                    ARC_BARC: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'PBA'){
+                                outsReports_obj_cleaned.push({ 
+                                    PBA: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'LCM'){
+                                outsReports_obj_cleaned.push({ 
+                                    LCM: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'SEED'){
+                                outsReports_obj_cleaned.push({ 
+                                    SEED: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'FGA'){
+                                outsReports_obj_cleaned.push({ 
+                                    FGA: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'PLM'){
+                                outsReports_obj_cleaned.push({ 
+                                    PLM: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'EDG_CTR'){
+                                outsReports_obj_cleaned.push({ 
+                                    EDG_CTR: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'PLATING'){
+                                outsReports_obj_cleaned.push({ 
+                                    PLATING: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'ETCHBK'){
+                                outsReports_obj_cleaned.push({ 
+                                    ETCHBK: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            } else if(outsReports_obj[i].process_id == 'TEST'){
+                                outsReports_obj_cleaned.push({ 
+                                    TEST: {
+                                    first_d: first_d,
+                                    first_d_Outs: outsReports_obj[i].first_d,
+                                    second_d: second_d,
+                                    second_d_Outs: outsReports_obj[i].second_d,
+                                    third_d: third_d,
+                                    third_d_Outs: outsReports_obj[i].third_d
+                                }});
+                            }
+                        }
+
+                    console.log(outsReports_obj_cleaned);
+                });
+                
+                /*
                 authorized202().then(function(authorized_ip){ // invoker for all the objects :)
                     return authMailer202().then(function(mailer_transporter_obj){
                         return recipientMail().then(function(recipients_arr){
@@ -305,6 +532,7 @@ module.exports = function(app){
                         });
                     });    
                 });
+                */
             }
         });
     });

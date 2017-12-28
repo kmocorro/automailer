@@ -36,15 +36,14 @@ if [ ! $POSTU ]; then
     echo "Do this: Open XAMPP cpanel then click Start button in MySQL."
     
     # curl new post request VIBER or something to notify admin
-    sleep 20
+    sleep 3
     exit
 else
-    echo "Connected!"
     echo "Checking web service response..."
         
     if [ -e "../tmp/automailer.txt" ]; then # temp file exists, don't do anything
         echo "automailer is already running..."
-        sleep 5
+        sleep 3
         exit
     else
         touch ../tmp/automailer.txt #hoping that bash doesn't crash
@@ -54,7 +53,7 @@ else
         else
 
             if [ $APIRES != 1 ]; then
-                echo "Cannot access API"
+                echo "API 404"
                 echo "Check the APIRES variable. Link should be indexed" # localhost:8000
                 rm ../tmp/automailer.txt
                 
@@ -64,12 +63,11 @@ else
                     conRefused # if /404 connection refused means that nodejs isn't running, invoke function instead
                 fi
 
-                sleep 5 # for us to read the echo
+                sleep 3 # for us to read the echo
                 exit
             else
-                echo "Server is active"
+                echo "Server is ACTIVE"
                 curl -d "user=$POSTU&pass=$POSTP" http://localhost:8000/202
-                sleep 5 # for us to read the echo
                 rm ../tmp/automailer.txt
 
                 # wait for next trigger 6:30 / 18:30
