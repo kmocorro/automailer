@@ -48,7 +48,7 @@ else
     else
         touch ../tmp/automailer.txt #hoping that bash doesn't crash
 
-        if [ "$?" = "7" ]; then
+        if [ "$?" = "7" ]; then # not sure why it's 7 lol
             conRefused # if / connection refused means that nodejs isn't running, invoke function instead
         else
 
@@ -57,7 +57,7 @@ else
                 echo "Check the APIRES variable. Link should be indexed" # localhost:8000
                 rm ../tmp/automailer.txt
                 
-                curl -d "gg=err" http://localhost:8000/404 # send information to admin
+                curl -d "gg=err" --max-time 300 http://localhost:8000/404 # send information to admin
 
                 if [ "$?" = "7" ]; then
                     conRefused # if /404 connection refused means that nodejs isn't running, invoke function instead
@@ -67,7 +67,7 @@ else
                 exit
             else
                 echo "Server is ACTIVE"
-                curl -d "user=$POSTU&pass=$POSTP" http://localhost:8000/202
+                curl -d "user=$POSTU&pass=$POSTP" --max-time 300  http://localhost:8000/202
                 rm ../tmp/automailer.txt
 
                 # wait for next trigger 6:30 / 18:30

@@ -5,6 +5,7 @@ let mysqlMES = require('../dbconfig/configMES');    //  mes data
 let Promise = require('bluebird');
 let moment = require('moment');
 let nodemailer = require('nodemailer');
+let Excel = require('exceljs');
 
 module.exports = function(app){
 
@@ -293,6 +294,18 @@ module.exports = function(app){
                     });
                 }
 
+                function toExcel(){ // this should compile OUTS & WIP json objects
+                    return new Promise(function(resolve, reject){
+                        mysqlCloud.poolCloud.getConnection(function(err, connection){
+                            connection.query({
+
+                            },  function(err, results, fields){
+
+                            });
+                        });
+                    }); 
+                }
+
 
                 authorized202().then(function(authorized_ip){ // invoker number 2
                     return authMailer202().then(function(mailer_transporter_obj){
@@ -305,6 +318,11 @@ module.exports = function(app){
                                 console.log('Running on AM shift');
                                 // check if AM outs exist to avoid multiple staging
                                 mysqlCloud.poolCloud.getConnection(function(err, connection){
+                                    connection.query({
+                                        sql: 'SET @@session.time_zone = "+08:00"'
+                                    },  function(err, results, fields){
+                                        console.log('Timezone set to +8:00');
+                                    });
                                     connection.query({
                                         sql: 'SELECT * FROM tbl_outs_data WHERE first_d = CONCAT(DATE_ADD(CURDATE(), INTERVAL -1 DAY)," 18:30:00") AND upload_date >= CONCAT(CURDATE()," 06:30:00")'
                                     },  function(err, results, fields){
