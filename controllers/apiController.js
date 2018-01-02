@@ -249,7 +249,7 @@ module.exports = function(app){
                     });
                 }
     
-                function outsReport(){  // AM extractor// 3 previous shift OUTS summary
+                function outsReportAM(){  // AM extractor// 3 previous shift OUTS summary
                     return new Promise(function(resolve, reject){
                         mysqlMES.poolMES.getConnection(function(err, connection){   
                             connection.query({
@@ -271,268 +271,685 @@ module.exports = function(app){
                     });
                 }
 
-                outsReport().then(function(outsReports_obj){
-                    // clean obj for AM Extract only
-                    let outsReports_obj_cleaned = [];
-                    let DATEgo = moment(new Date()).subtract(1, 'days');
-                    let first_d = moment(DATEgo).format('YYYY-MMM-D, [PM]');
-                    let second_d = moment(DATEgo).format('YYYY-MMM-D, [AM]');
+                function outsReportPM(){
+                    return new Promise(function(resolve, reject){
+                        mysqlMES.poolMES.getConnection(function(err, connection){
+                            connection.query({
+                                sql: 'SELECT A.process_id, A.first_d, B.second_d, C.third_d FROM     (SELECT process_id, SUM(out_qty) AS first_d FROM MES_OUT_DETAILS A    WHERE date_time >= CONCAT(DATE_ADD(CURDATE(), INTERVAL 0 DAY)," 06:30:00") AND date_time <= CONCAT(DATE_ADD(CURDATE(), INTERVAL 0 DAY)," 18:29:59")    GROUP BY process_id) A    JOIN(SELECT process_id, SUM(out_qty) AS second_d FROM MES_OUT_DETAILS A    WHERE date_time >= CONCAT(DATE_ADD(CURDATE(), INTERVAL -1 DAY)," 18:30:00") AND date_time <= CONCAT(DATE_ADD(CURDATE(), INTERVAL 0 DAY)," 06:29:59")    GROUP BY process_id) B  ON A.process_id = B.process_id    JOIN(SELECT process_id, SUM(out_qty) AS third_d FROM MES_OUT_DETAILS A     WHERE date_time >= CONCAT(DATE_ADD(CURDATE(), INTERVAL -1 DAY)," 06:30:00") AND date_time <= CONCAT(DATE_ADD(CURDATE(), INTERVAL -1 DAY)," 18:29:59")    GROUP BY process_id)  C   ON A.process_id = C.process_id'
+                            },  function(err, results, fields){
+                                    let outsReportPM_obj = [];
+                                        for(let i=0;i<results.length;i++){
+                                            outsReportPM_obj.push({
+                                                process_id: results[i].process_id,
+                                                first_d: results[i].first_d,
+                                                second_d: results[i].second_d,
+                                                third_d: results[i].third_d
+                                            });
+                                        }
+                                    resolve(outsReportPM_obj);
+                            });
+                            connection.release();
+                        });
+                    });
+                }
 
-                    let DATEgogo = moment(new Date()).subtract(2, 'days');
-                    let third_d = moment(DATEgogo).format('YYYY-MMM-D, [PM]');
 
-                        for(let i=0;i<outsReports_obj.length;i++){ // cleaning objects
-                            if(outsReports_obj[i].process_id == 'DAMAGE'){
-                                outsReports_obj_cleaned.push({ 
-                                    DAMAGE: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'POLY'){
-                                outsReports_obj_cleaned.push({ 
-                                    POLY: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'BSGDEP'){
-                                outsReports_obj_cleaned.push({ 
-                                    BSGDEP: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'NTM'){
-                                outsReports_obj_cleaned.push({ 
-                                    NTM: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'NOXE'){
-                                outsReports_obj_cleaned.push({ 
-                                    NOXE: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'NDEP'){
-                                outsReports_obj_cleaned.push({ 
-                                    NDEP: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'PTM'){
-                                outsReports_obj_cleaned.push({ 
-                                    PTM: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'TOXE'){
-                                outsReports_obj_cleaned.push({ 
-                                    TOXE: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'CLEANTEX'){
-                                outsReports_obj_cleaned.push({ 
-                                    CLEANTEX: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'PDRIVE'){
-                                outsReports_obj_cleaned.push({ 
-                                    PDRIVE: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'ARC_BARC'){
-                                outsReports_obj_cleaned.push({ 
-                                    ARC_BARC: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'PBA'){
-                                outsReports_obj_cleaned.push({ 
-                                    PBA: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'LCM'){
-                                outsReports_obj_cleaned.push({ 
-                                    LCM: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'SEED'){
-                                outsReports_obj_cleaned.push({ 
-                                    SEED: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'FGA'){
-                                outsReports_obj_cleaned.push({ 
-                                    FGA: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'PLM'){
-                                outsReports_obj_cleaned.push({ 
-                                    PLM: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'EDG_CTR'){
-                                outsReports_obj_cleaned.push({ 
-                                    EDG_CTR: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'PLATING'){
-                                outsReports_obj_cleaned.push({ 
-                                    PLATING: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'ETCHBK'){
-                                outsReports_obj_cleaned.push({ 
-                                    ETCHBK: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            } else if(outsReports_obj[i].process_id == 'TEST'){
-                                outsReports_obj_cleaned.push({ 
-                                    TEST: {
-                                    first_d: first_d,
-                                    first_d_Outs: outsReports_obj[i].first_d,
-                                    second_d: second_d,
-                                    second_d_Outs: outsReports_obj[i].second_d,
-                                    third_d: third_d,
-                                    third_d_Outs: outsReports_obj[i].third_d
-                                }});
-                            }
-                        }
-
-                    console.log(outsReports_obj_cleaned);
-                });
-                
-                /*
-                authorized202().then(function(authorized_ip){ // invoker for all the objects :)
+                authorized202().then(function(authorized_ip){ // invoker number 2
                     return authMailer202().then(function(mailer_transporter_obj){
                         return recipientMail().then(function(recipients_arr){
-                            //  mailer
-                            nodemailer.createTestAccount((err, account) => {
-                                console.log('Sending from nodemailer....');
-                                //  reusable transporter obj using SMTP
-                                let transporter = nodemailer.createTransport({
-                                    host: mailer_transporter_obj[0].host,
-                                    port: mailer_transporter_obj[0].port,
-                                    secure: false, // we're standard tls
-                                    auth: {
-                                        user: mailer_transporter_obj[0].user,
-                                        pass: mailer_transporter_obj[0].pass
-                                    },
-                                    tls: {
-                                        ciphers: mailer_transporter_obj[0].cipher
-                                    }
+
+                            let currentTime = new Date();
+                            let isAMorPM = moment(currentTime).format('A');
+                            
+                            if(isAMorPM == 'AM'){ // clean obj for AM Extract only
+                                console.log('Running on AM shift');
+                                // check if AM outs exist to avoid multiple staging
+                                mysqlCloud.poolCloud.getConnection(function(err, connection){
+                                    connection.query({
+                                        sql: 'SELECT * FROM tbl_outs_data WHERE first_d = CONCAT(DATE_ADD(CURDATE(), INTERVAL -1 DAY)," 18:30:00") AND upload_date >= CONCAT(CURDATE()," 06:30:00")'
+                                    },  function(err, results, fields){
+
+                                        if(typeof results[0] == 'undefined' || results[0] == null || results.length < 0){ // if not exist
+                                            // 2018-01-02 | extract from cloud to excel then attach to nodemailer
+                                            return outsReportAM().then(function(outsReports_obj){
+
+                                                let outsReports_obj_cleaned = [];
+                                                let DATEgo = moment(new Date()).subtract(1, 'days');
+                                                let first_d = moment(DATEgo).format('YYYY-MM-DD [18:30:00]');
+                                                let second_d = moment(DATEgo).format('YYYY-MM-DD [06:30:00]');
+                                            
+                                                let DATEgogo = moment(new Date()).subtract(2, 'days');
+                                                let third_d = moment(DATEgogo).format('YYYY-MM-DD [18:30:00]');
+                                                
+                                                for(let i=0;i<outsReports_obj.length;i++){ // cleaning object
+                                                        if(outsReports_obj[i].process_id == 'DAMAGE'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'POLY'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'BSGDEP'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'NTM'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'NOXE'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'NDEP'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'PTM'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'TOXE'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'CLEANTEX'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'PDRIVE'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'ARC_BARC'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'PBA'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'LCM'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'SEED'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'FGA'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'PLM'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'EDG_CTR'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'PLATING'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'ETCHBK'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                                });
+                                                            } else if(outsReports_obj[i].process_id == 'TEST'){
+                                                                outsReports_obj_cleaned.push({ 
+                                                                    process_id: outsReports_obj[i].process_id,
+                                                                    first_d: first_d,
+                                                                    first_d_Outs: outsReports_obj[i].first_d,
+                                                                    second_d: second_d,
+                                                                    second_d_Outs: outsReports_obj[i].second_d,
+                                                                    third_d: third_d,
+                                                                    third_d_Outs: outsReports_obj[i].third_d
+                                                            });
+                                                        }
+                                                }
+                                                    
+                                                mysqlCloud.poolCloud.getConnection(function(err, connection){ // cleaned obj to cloud 
+                                                    console.log('Uploading to db...');
+                                                    for(let i=0;i<outsReports_obj_cleaned.length;i++){
+                                                        connection.query({
+                                                            sql: 'INSERT INTO tbl_outs_data SET upload_date=?, process_id=?, first_d=?, first_d_Outs=?, second_d=?, second_d_Outs=?, third_d=?, third_d_Outs=?',
+                                                            values: [new Date(), outsReports_obj_cleaned[i].process_id, outsReports_obj_cleaned[i].first_d, outsReports_obj_cleaned[i].first_d_Outs, outsReports_obj_cleaned[i].second_d, outsReports_obj_cleaned[i].second_d_Outs, outsReports_obj_cleaned[i].third_d, outsReports_obj_cleaned[i].third_d_Outs]
+                                                        },  function(err, results, fields){
+                                                        });
+                                                    }
+                                                    connection.release();
+                                                    console.log('AM | Saved to cloud');
+                                                });
+            
+                                                nodemailer.createTestAccount((err, account) => { //  mail man :O 
+                                                    console.log('Sending from nodemailer....');
+                                                    
+                                                    let transporter = nodemailer.createTransport({ //  reusable transporter obj using SMTP
+                                                        host: mailer_transporter_obj[0].host,
+                                                        port: mailer_transporter_obj[0].port,
+                                                        secure: false, // we're standard tls
+                                                        auth: {
+                                                            user: mailer_transporter_obj[0].user,
+                                                            pass: mailer_transporter_obj[0].pass
+                                                        },
+                                                        tls: {
+                                                            ciphers: mailer_transporter_obj[0].cipher
+                                                        }
+                                                    });
+                            
+                                                    //  array to string 
+                                                    let recipientToString = recipients_arr.join(", "); // join with comma
+                                
+                                                    //  setup mail
+                                                    let mailOptions = {
+                                                        from: '"Auto Mailer" <' + mailer_transporter_obj[0].user + '>', 
+                                                        to: recipientToString,
+                                                        subject: 'WIP & Outs Report (Testing) ' + moment(new Date()).format('llll'),
+                                                        text: 'This email is from nodejs program - kevin',
+                                                    };
+                                
+                                                    //  send mail
+                                                    transporter.sendMail(mailOptions, (error, info) => {
+                                                        if (error) {
+                                                            return console.log(error);
+                                                        }
+                                                        console.log('Message sent!');
+                                                        res.send('Requested by: ' + authorized_ip + ' Report sent successfully!');
+                                                    });
+                                                    
+                                                });
+            
+                                            });
+                                        } else {
+                                            console.log('AM data already exists');
+                                            // send email
+                                            nodemailer.createTestAccount((err, account) => { //  mail man :O 
+                                                console.log('Sending from nodemailer....');
+                                                
+                                                let transporter = nodemailer.createTransport({ //  reusable transporter obj using SMTP
+                                                    host: mailer_transporter_obj[0].host,
+                                                    port: mailer_transporter_obj[0].port,
+                                                    secure: false, // we're standard tls
+                                                    auth: {
+                                                        user: mailer_transporter_obj[0].user,
+                                                        pass: mailer_transporter_obj[0].pass
+                                                    },
+                                                    tls: {
+                                                        ciphers: mailer_transporter_obj[0].cipher
+                                                    }
+                                                });
+                        
+                                                //  array to string 
+                                                let recipientToString = recipients_arr.join(", "); // join with comma
+                            
+                                                //  setup mail
+                                                let mailOptions = {
+                                                    from: '"Auto Mailer" <' + mailer_transporter_obj[0].user + '>', 
+                                                    to: recipientToString,
+                                                    subject: 'WIP & Outs Report (Testing) ' + moment(new Date()).format('llll'),
+                                                    text: 'This email is from nodejs program - kevin',
+                                                };
+                            
+                                                //  send mail
+                                                transporter.sendMail(mailOptions, (error, info) => {
+                                                    if (error) {
+                                                        return console.log(error);
+                                                    }
+                                                    console.log('Message sent!');
+                                                    res.send('Requested by: ' + authorized_ip + ' Report sent successfully!');
+                                                });
+                                                
+                                            });
+                                        }
+                                    });
+                                    connection.release();
                                 });
-        
-                                //  array to string 
-                                let recipientToString = recipients_arr.join(", "); // join with comma
-        
-                                //  setup mail
-                                let mailOptions = {
-                                    from: '"Auto Mailer" <' + mailer_transporter_obj[0].user + '>', 
-                                    to: recipientToString,
-                                    subject: 'WIP & Outs Report (Testing) ' + moment(new Date()).format('llll'),
-                                    text: 'This email is from nodejs program - kevin',
-                                };
-        
-                                //  send mail
-                                transporter.sendMail(mailOptions, (error, info) => {
-                                    if (error) {
-                                        return console.log(error);
-                                    }
-                                    console.log('Message sent!');
-                                    res.send('Requested by: ' + authorized_ip + ' Report sent successfully!');
+
+                            } else if(isAMorPM == 'PM'){ // clean obj for PM Extract only  
+                                console.log('Running on PM shift');   
+                                // check if PM outs exist to avoid multiple staging
+                                mysqlCloud.poolCloud.getConnection(function(err, connection){
+                                    connection.query({
+                                        sql: 'SELECT * FROM tbl_outs_data WHERE first_d = CONCAT(CURDATE()," 06:30:00") AND upload_date >= CONCAT(CURDATE()," 18:30:00")'
+                                    },  function(err, results, fields){
+
+                                        if(typeof results[0] == 'undefined' || results[0] == null || results.length < 0){
+                                            return outsReportPM().then(function(outsReportPM_obj){  
+                                                let outsReportPM_obj_cleaned = [];
+                                                let first_d = moment(new Date()).format('YYYY-MM-DD [06:30:00]');
+                                                
+                                                let DATEpm = moment(new Date()).subtract(1, 'days');
+                                                let second_d = moment(DATEpm).format('YYYY-MM-DD [18:30:00]');
+                                                let third_d = moment(DATEpm).format('YYYY-MM-DD [06:30:00]');
+                                        
+                                                for(let i=0;i<outsReportPM_obj.length;i++){ // pm cleaners
+                                                        if(outsReportPM_obj[i].process_id == 'DAMAGE'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'POLY'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'BSGDEP'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'NTM'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'NOXE'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'NDEP'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'PTM'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'TOXE'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'CLEANTEX'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'PDRIVE'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'ARC_BARC'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'PBA'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'LCM'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'SEED'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'FGA'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'PLM'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'EDG_CTR'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'PLATING'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'ETCHBK'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        } else if(outsReportPM_obj[i].process_id == 'TEST'){
+                                                            outsReportPM_obj_cleaned.push({ 
+                                                                process_id: outsReportPM_obj[i].process_id,
+                                                                first_d: first_d,
+                                                                first_d_Outs: outsReportPM_obj[i].first_d,
+                                                                second_d: second_d,
+                                                                second_d_Outs: outsReportPM_obj[i].second_d,
+                                                                third_d: third_d,
+                                                                third_d_Outs: outsReportPM_obj[i].third_d
+                                                            });
+                                                        }
+                                                }
+            
+                                                mysqlCloud.poolCloud.getConnection(function(err, connection){ // cleaned pm obj are now going to sleep
+                                                    console.log('Uploading to db...');
+                                                        for(let i=0;i<outsReportPM_obj_cleaned.length;i++){
+                                                            connection.query({
+                                                                sql:'INSERT INTO tbl_outs_data SET upload_date=?, process_id=?, first_d=?, first_d_Outs=?, second_d=?, second_d_Outs=?, third_d=?, third_d_Outs=?',
+                                                                values:[new Date(), outsReportPM_obj_cleaned[i].process_id, outsReportPM_obj_cleaned[i].first_d, outsReportPM_obj_cleaned[i].first_d_Outs, outsReportPM_obj_cleaned[i].second_d, outsReportPM_obj_cleaned[i].second_d_Outs, outsReportPM_obj_cleaned[i].third_d, outsReportPM_obj_cleaned[i].third_d_Outs]
+                                                            }, function(err, results, fields){
+                                                            });
+                                                        }
+                                                        connection.release();
+                                                        console.log('PM SHIFT done');
+                                                        // done pm
+                                                });
+            
+                                                nodemailer.createTestAccount((err, account) => { //  mail man :O 
+                                                        console.log('Sending from nodemailer....');
+                                                         
+                                                        let transporter = nodemailer.createTransport({ //  reusable transporter obj using SMTP
+                                                            host: mailer_transporter_obj[0].host,
+                                                            port: mailer_transporter_obj[0].port,
+                                                            secure: false, // we're standard tls
+                                                            auth: {
+                                                                user: mailer_transporter_obj[0].user,
+                                                                pass: mailer_transporter_obj[0].pass
+                                                            },
+                                                            tls: {
+                                                                ciphers: mailer_transporter_obj[0].cipher
+                                                            }
+                                                        });
+                                
+                                                        //  array to string 
+                                                        let recipientToString = recipients_arr.join(", "); // join with comma
+                                    
+                                                        //  setup mail
+                                                        let mailOptions = {
+                                                            from: '"Auto Mailer" <' + mailer_transporter_obj[0].user + '>', 
+                                                            to: recipientToString,
+                                                            subject: 'WIP & Outs Report (Testing) ' + moment(new Date()).format('llll'),
+                                                            text: 'This email is from nodejs program - kevin',
+                                                        };
+                                    
+                                                        //  send mail
+                                                        transporter.sendMail(mailOptions, (error, info) => {
+                                                            if (error) {
+                                                                return console.log(error);
+                                                            }
+                                                            console.log('Message sent!');
+                                                            res.send('Requested by: ' + authorized_ip + ' Report sent successfully!');
+                                                        });
+                                                        
+                                                });
+            
+                                            });
+                                        } else {
+                                            console.log('PM data already exists');
+
+                                            // send email
+                                            nodemailer.createTestAccount((err, account) => { //  mail man :O 
+                                                console.log('Sending from nodemailer....');
+                                                
+                                                let transporter = nodemailer.createTransport({ //  reusable transporter obj using SMTP
+                                                    host: mailer_transporter_obj[0].host,
+                                                    port: mailer_transporter_obj[0].port,
+                                                    secure: false, // we're standard tls
+                                                    auth: {
+                                                        user: mailer_transporter_obj[0].user,
+                                                        pass: mailer_transporter_obj[0].pass
+                                                    },
+                                                    tls: {
+                                                        ciphers: mailer_transporter_obj[0].cipher
+                                                    }
+                                                });
+                        
+                                                //  array to string 
+                                                let recipientToString = recipients_arr.join(", "); // join with comma
+                            
+                                                //  setup mail
+                                                let mailOptions = {
+                                                    from: '"Auto Mailer" <' + mailer_transporter_obj[0].user + '>', 
+                                                    to: recipientToString,
+                                                    subject: 'WIP & Outs Report (Testing) ' + moment(new Date()).format('llll'),
+                                                    text: 'This email is from nodejs program - kevin',
+                                                };
+                            
+                                                //  send mail
+                                                transporter.sendMail(mailOptions, (error, info) => {
+                                                    if (error) {
+                                                        return console.log(error);
+                                                    }
+                                                    console.log('Message sent!');
+                                                    res.send('Requested by: ' + authorized_ip + ' Report sent successfully!');
+                                                });
+                                                
+                                            });
+
+                                        }
+
+                                    });
+                                    connection.release();
                                 });
-                            });
+
+                            }
+
                         });
-                    });    
+                    });
                 });
-                */
+
             }
         });
     });
