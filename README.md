@@ -1,3 +1,2 @@
 # automailer
-Practicing the law of cosmic laziness
-I don't know what I am doing...
+Nevermind, I'm just practicing the law of cosmic laziness.
